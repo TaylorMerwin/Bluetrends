@@ -22,10 +22,12 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
     volumes:
-      - kafka-data:/var/lib/kafka/data 
+      - kafka-data:/var/lib/kafka/data
 
   python:
-    build: ./python
+    build:
+      context: .
+      dockerfile: python/Dockerfile
     container_name: python
     hostname: python
     volumes:
@@ -33,7 +35,32 @@ services:
     working_dir: /home/app
     command: sleep infinity
     depends_on:
-      - broker 
+      - broker
+
+  airflow:
+    image: apache/airflow:2.10.5
+    container_name: airflow
+    volumes:
+      - ./src/airflow:/opt/airflow/dags # DAG files go in the airflow directory
+      - ./data/airflow:/usr/local/airflow # Persist metadata if needed
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      - broker
+      - python
+
+  spark:
+    image: bitnami/spark:3.5
+    container_name: spark
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8081:8080" # Spark UI on 8081 (or adjust accordingly)
+    volumes:
+      - ./src/processing:/opt/spark-apps # PySpark scripts live here
+    depends_on:
+      - broker
 
 volumes:
   kafka-data:

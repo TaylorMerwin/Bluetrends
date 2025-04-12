@@ -1,0 +1,19 @@
+[project]
+name = "bluetrends"
+version = "0.1.0"
+description = "Capstone project for Dev10 Data Engineering 2025-3 Cohort"
+authors = [
+    {name = "Taylor Merwin",email = "taylor.merwin@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyspark (>=3.5.5,<4.0.0)",
+    "websockets (>=15.0.1,<16.0.0)",
+    "kafka-python (>=2.1.5,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
