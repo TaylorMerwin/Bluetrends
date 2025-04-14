@@ -1,3 +1,4 @@
+# docker-compose.yml
 services:
   broker:
     image: apache/kafka:latest
@@ -50,9 +51,9 @@ services:
       - broker
       - python
 
-  spark:
+  spark-master:
     image: bitnami/spark:3.5
-    container_name: spark
+    container_name: spark-master
     environment:
       - SPARK_MODE=master
     ports:
@@ -61,6 +62,38 @@ services:
       - ./src/processing:/opt/spark-apps # PySpark scripts live here
     depends_on:
       - broker
+
+  spark-worker-1:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+
+  spark-worker-2:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-2
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+  
+  mysql:
+    image: mysql:9.2.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bluetrends-dev
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: always
 
 volumes:
   kafka-data:

@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /home/app
 
@@ -16,7 +16,7 @@ COPY pyproject.toml poetry.lock* ./
 
 # Configure Poetry not to create a virtual environment and install dependencies globally
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
+    && poetry install --no-interaction --no-ansi --no-root
 
 # Now copy your actual project files
 COPY . .
