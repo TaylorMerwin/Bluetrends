@@ -56,10 +56,17 @@ services:
     container_name: spark-master
     environment:
       - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+
+      # The correct environment var name:
+      - SPARK_EVENTLOG_ENABLED=true
+      - SPARK_EVENTLOG_DIR=/tmp/spark-events
+
     ports:
-      - "8081:8080" # Spark UI on 8081 (or adjust accordingly)
+      - "8081:8080"
     volumes:
-      - ./src/processing:/opt/spark-apps # PySpark scripts live here
+      - ./src/processing:/opt/spark-apps
+      - spark-events:/tmp/spark-events
     depends_on:
       - broker
 
@@ -80,20 +87,42 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
     depends_on:
       - spark-master
-  
-  mysql:
+
+  spark-history:
+    image: bitnami/spark:3.5
+    container_name: spark-history
+
+    # Supply Spark history-related properties via SPARK_HISTORY_OPTS.
+    # Note the log directory and port must match how your master is configured.
+    environment:
+      - SPARK_HISTORY_OPTS=-Dspark.history.ui.port=18080 -Dspark.history.fs.logDirectory=/tmp/spark-events -Dspark.history.fs.cleaner.enabled=false
+
+    # Override the default entrypoint/command to launch the History Server
+    command: [ "/opt/bitnami/spark/bin/spark-class", "org.apache.spark.deploy.history.HistoryServer" ]
+
+    volumes:
+      - spark-events:/tmp/spark-events
+    ports:
+      - "18080:18080"
+    depends_on:
+      - spark-master
+
+  db:
     image: mysql:9.2.0
-    container_name: mysql
+    container_name: db
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: bluetrends-dev
+      MYSQL_DATABASE: bluetrends
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./mysql/initdb:/docker-entrypoint-initdb.d
     restart: always
 
 volumes:
   kafka-data:
+  mysql-data:
+  spark-events:
