@@ -20,7 +20,7 @@ producer = KafkaProducer(
 
 
 async def consume_jetstream():
-    uri = "wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
+    uri = "wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
 
     async with connect(uri) as websocket:
         async for message in websocket:
@@ -35,10 +35,7 @@ async def consume_jetstream():
                 text_data = {
                     "did": event["did"],
                     "createdAt": commit_record.get("createdAt"),
-                    "text": commit_record.get(
-                        "text", ""
-                    ),  # Default to empty string if text is missing
-                    "reply_to": commit_record.get("reply", {}),
+                    "text": commit_record.get("text", ""),
                 }
 
                 # Send to Kafka

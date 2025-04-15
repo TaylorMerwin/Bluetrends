@@ -1,11 +1,12 @@
+# src/processing/jobs/jetstream_consumer.py
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col
-from pyspark.sql.types import StructType, StructField, StringType, MapType
+from pyspark.sql.functions import from_json, col, to_timestamp
+from pyspark.sql.types import StructType, StructField, StringType, MapType, NumericType
 
 # Initialize Spark session
 spark = SparkSession.builder \
     .appName("JetstreamConsumer") \
-    .master("spark://spark:7077") \
+    .master("spark://spark-master:7077") \
     .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5") \
     .getOrCreate()
 
@@ -25,11 +26,16 @@ schema = StructType([
     StructField("did", StringType(), True),
     StructField("createdAt", StringType(), True),
     StructField("text", StringType(), True),
-    StructField("reply_to", MapType(StringType(), StringType()), True)
 ])
 
 # Parse the JSON string column into a structured DataFrame
 df_parsed = df_string.select(from_json(col("json_str"), schema).alias("data")).select("data.*")
+
+# Convert the 'createdAt' field to a timestamp
+df_parsed = df_parsed.withColumn(
+    "createdAt_ts",
+    to_timestamp(col("createdAt"), "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'")
+)
 
 # Write the stream to the console, for testing
 query = df_parsed.writeStream \
