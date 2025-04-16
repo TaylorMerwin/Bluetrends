@@ -4,12 +4,12 @@ USE bluetrends;
 
 CREATE TABLE IF NOT EXISTS categories (
     category_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    category_name VARCHAR(100) UNIQUE NOT NULL,
+    category_name VARCHAR(100) UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS keywords (
     keyword_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    keyword_name VARCHAR(100) UNIQUE NOT NULL,
+    keyword_name VARCHAR(100) UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS posts (
@@ -44,4 +44,11 @@ CREATE TABLE IF NOT EXISTS post_keywords (
     REFERENCES keywords(keyword_id)
     ON DELETE CASCADE
     ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS raw_posts (
+    post_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    did VARCHAR(255) NOT NULL,
+    text TEXT NOT NULL,
+    created_at DATETIME NOT NULL
 );

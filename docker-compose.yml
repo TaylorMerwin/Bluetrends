@@ -47,6 +47,8 @@ services:
     ports:
       - "8080:8080"
     command: webserver
+    environment:
+      - AIRFLOW_CONN_MYSQL_MOVIES=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
     depends_on:
       - broker
       - python
@@ -111,10 +113,10 @@ services:
     image: mysql:9.2.0
     container_name: db
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: bluetrends
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
