@@ -56,6 +56,9 @@ services:
   spark-master:
     image: bitnami/spark:3.5
     container_name: spark-master
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
     environment:
       - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
@@ -75,6 +78,9 @@ services:
   spark-worker-1:
     image: bitnami/spark:3.5
     container_name: spark-worker-1
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -84,28 +90,12 @@ services:
   spark-worker-2:
     image: bitnami/spark:3.5
     container_name: spark-worker-2
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-    depends_on:
-      - spark-master
-
-  spark-history:
-    image: bitnami/spark:3.5
-    container_name: spark-history
-
-    # Supply Spark history-related properties via SPARK_HISTORY_OPTS.
-    # Note the log directory and port must match how your master is configured.
-    environment:
-      - SPARK_HISTORY_OPTS=-Dspark.history.ui.port=18080 -Dspark.history.fs.logDirectory=/tmp/spark-events -Dspark.history.fs.cleaner.enabled=false
-
-    # Override the default entrypoint/command to launch the History Server
-    command: [ "/opt/bitnami/spark/bin/spark-class", "org.apache.spark.deploy.history.HistoryServer" ]
-
-    volumes:
-      - spark-events:/tmp/spark-events
-    ports:
-      - "18080:18080"
     depends_on:
       - spark-master
 

@@ -1,7 +1,9 @@
 # src/processing/jobs/jetstream_consumer.py
+import os
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, to_timestamp
+from pyspark.sql.functions import from_json, col, to_timestamp, udf, coalesce, date_trunc, current_timestamp
 from pyspark.sql.types import StructType, StructField, StringType, MapType, NumericType
+
 
 # Initialize Spark session
 spark = SparkSession.builder \
@@ -31,16 +33,50 @@ schema = StructType([
 # Parse the JSON string column into a structured DataFrame
 df_parsed = df_string.select(from_json(col("json_str"), schema).alias("data")).select("data.*")
 
-# Convert the 'createdAt' field to a timestamp
+
+
+# Attempt to convert the createdAt string using several ISO8601 patterns:
 df_parsed = df_parsed.withColumn(
-    "createdAt_ts",
-    to_timestamp(col("createdAt"), "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'")
+    "createdAt",
+    coalesce(
+        to_timestamp(col("createdAt"), "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"),
+        to_timestamp(col("createdAt"), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
+        to_timestamp(col("createdAt"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    )
 )
+
+df_parsed = df_parsed.withColumnRenamed("createdAt", "created_at")
+
+
+# Function that writes a micro-batch of data to the raw_posts table using environment variables
+def write_to_raw_posts(batch_df, batch_id):
+
+    # replace null time stamps with current timestamp
+    batch_df = batch_df.withColumn("created_at", coalesce(col("created_at"), current_timestamp()))
+
+    # Drop rows with empty text
+    batch_df = batch_df.filter(col("text").isNotNull() & (col("text") != ""))
+
+    jdbc_url = os.environ.get("MYSQL_JDBC_URL")  # e.g., "jdbc:mysql://<db_host>:<db_port>/bluetrends"
+    username = os.environ.get("MYSQL_USERNAME")
+    password = os.environ.get("MYSQL_PASSWORD")
+    # print("jdbc url: ", jdbc_url)
+    # print("username: ", username)
+    # print("password: ", password)
+    batch_df.write \
+        .format("jdbc") \
+        .option("url", "jdbc:mysql://db:3306/bluetrends") \
+        .option("dbtable", "raw_posts") \
+        .option("user", "blueuser") \
+        .option("password", "bluepassword") \
+        .option("driver", "com.mysql.cj.jdbc.Driver") \
+        .mode("append") \
+        .save()
 
 # Write the stream to the console, for testing
 query = df_parsed.writeStream \
+    .foreachBatch(write_to_raw_posts) \
     .outputMode("append") \
-    .format("console") \
     .start()
 
 query.awaitTermination()
