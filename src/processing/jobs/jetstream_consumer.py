@@ -1,7 +1,7 @@
 # src/processing/jobs/jetstream_consumer.py
 import os
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, to_timestamp, udf, coalesce, date_trunc, current_timestamp
+from pyspark.sql.functions import from_json, col, to_timestamp, udf, coalesce, date_trunc, current_timestamp, when, expr
 from pyspark.sql.types import StructType, StructField, StringType, MapType, NumericType
 
 
@@ -53,6 +53,17 @@ def write_to_raw_posts(batch_df, batch_id):
 
     # replace null time stamps with current timestamp
     batch_df = batch_df.withColumn("created_at", coalesce(col("created_at"), current_timestamp()))
+
+    batch_df = batch_df.withColumn(
+        "created_at",
+        when(
+            (col("created_at") > current_timestamp()) |
+            (col("created_at") < expr("current_timestamp() - interval 1 hour")),
+            current_timestamp()
+        )
+        .otherwise(col("created_at"))
+    )
+
 
     # Drop rows with empty text
     batch_df = batch_df.filter(col("text").isNotNull() & (col("text") != ""))

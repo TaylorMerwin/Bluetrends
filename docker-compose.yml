@@ -74,6 +74,8 @@ services:
       - spark-events:/tmp/spark-events
     depends_on:
       - broker
+    env_file:
+      - ./.env
 
   spark-worker-1:
     image: bitnami/spark:3.5
@@ -86,6 +88,8 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
     depends_on:
       - spark-master
+    env_file:
+      - ./.env
 
   spark-worker-2:
     image: bitnami/spark:3.5
@@ -98,6 +102,8 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
     depends_on:
       - spark-master
+    env_file:
+      - ./.env
 
   db:
     image: mysql:9.2.0
