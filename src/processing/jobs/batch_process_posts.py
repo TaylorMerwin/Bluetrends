@@ -10,7 +10,7 @@ from better_profanity import profanity
 from keybert import KeyBERT
 from transformers import pipeline
 
-# Configure logging
+# ——— Logging setup ———
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -18,26 +18,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger('BatchPostProcessor')
 
-# ensure consistent language detection
+# ensure deterministic language detection
 DetectorFactory.seed = 0
 
-# --- UDF definitions ---
+# ——— UDFs ———
 logger.info("Defining UDFs")
-lang_udf = udf(lambda t: detect(t) if t else None, StringType())
-sfw_udf = udf(lambda t: not profanity.contains_profanity(t or ""), BooleanType())
+lang_udf       = udf(lambda t: detect(t) if t else None, StringType())
+sfw_udf        = udf(lambda t: not profanity.contains_profanity(t or ""), BooleanType())
 
 logger.info("Initializing sentiment pipeline")
-sent_pipe = pipeline("sentiment-analysis")
-sent_label_udf = udf(lambda t: sent_pipe(t)[0]["label"], StringType())
-sent_score_udf = udf(lambda t: float(sent_pipe(t)[0]["score"]), FloatType())
+sent_pipe       = pipeline("sentiment-analysis")
+sent_label_udf  = udf(lambda t: sent_pipe(t)[0]["label"],   StringType())
+sent_score_udf  = udf(lambda t: float(sent_pipe(t)[0]["score"]), FloatType())
 
-logger.info("Initializing KeyBERT model for keywords")
+logger.info("Initializing KeyBERT for keyword extraction")
 kw_model = KeyBERT()
 def extract_kw_arr(text: str):
     kws = kw_model.extract_keywords(
         text,
         keyphrase_ngram_range=(1, 2),
-        stop_words='english'
+        top_n=5
     )
     return [kw for kw, score in kws]
 kw_udf = udf(extract_kw_arr, ArrayType(StringType()))
@@ -53,7 +53,7 @@ def main():
                 .getOrCreate()
         )
 
-        # --- JDBC settings (hard‑coded) ---
+        # — JDBC connection (Compose service “db”) —
         jdbc_url = "jdbc:mysql://db:3306/bluetrends"
         props = {
             "user":     "blueuser",
@@ -61,98 +61,148 @@ def main():
             "driver":   "com.mysql.cj.jdbc.Driver"
         }
 
-        # 1) Load raw_posts
-        logger.info("Loading raw_posts table")
-        raw_df = spark.read.jdbc(jdbc_url, "raw_posts", properties=props) \
-            .withColumnRenamed("post_id", "raw_post_id")
-        logger.info(f"raw_posts contains {raw_df.count()} rows")
+        # 1) READ raw_posts & rename its PK to raw_post_id
+        logger.info("Loading raw_posts")
+        raw_df = (
+            spark.read
+                 .jdbc(jdbc_url, "raw_posts", properties=props)
+                 .withColumnRenamed("post_id", "raw_post_id")
+        )
 
-        # 2) Load already-processed posts
-        logger.info("Loading posts table")
-        proc_df = spark.read.jdbc(jdbc_url, "posts", properties=props)
-        logger.info(f"posts table contains {proc_df.count()} rows")
+        # 2) READ already‑processed posts (just raw_post_id)
+        logger.info("Loading processed posts (raw_post_id only)")
+        proc_ids = (
+            spark.read
+                 .jdbc(jdbc_url, "posts", properties=props)
+                 .select("raw_post_id")
+        )
 
-        # 3) Filter new posts
-        logger.info("Filtering new posts to process")
-        proc_min = proc_df.select("did", "created_at")
-        to_proc = raw_df.join(proc_min, on=["did", "created_at"], how="left_anti")
+        # 3) FILTER only new raw_posts by left-anti join on raw_post_id
+        logger.info("Filtering NEW posts to process")
+        to_proc = raw_df.join(proc_ids, on="raw_post_id", how="left_anti")
         new_count = to_proc.count()
-        logger.info(f"Found {new_count} new posts to process")
+        logger.info(f"Found {new_count} new posts")
         if new_count == 0:
-            logger.info("No new posts to process. Exiting.")
+            logger.info("No new posts. Exiting.")
             spark.stop()
             return
 
-        # 4) Enrich with language, SFW, sentiment, keywords
+        # 4) ENRICH with language, SFW, sentiment, keywords
         logger.info("Enriching data")
         enriched = (
             to_proc
-            .withColumn("language",        lang_udf(col("text")))
-            .withColumn("sfw",             sfw_udf(col("text")))
-            .withColumn("sentiment_label", sent_label_udf(col("text")))
-            .withColumn("sentiment_score", sent_score_udf(col("text")))
-            .withColumn("keywords",        kw_udf(col("text")))
+              .withColumn("language",        lang_udf(col("text")))
+              .withColumn("sfw",             sfw_udf(col("text")))
+              .withColumn("sentiment_label", sent_label_udf(col("text")))
+              .withColumn("sentiment_score", sent_score_udf(col("text")))
+              .withColumn("keywords",        kw_udf(col("text")))
         )
 
-        # 5) Preview
-        logger.info("Previewing enriched records")
+        # 5) PREVIEW the enriched rows
+        logger.info("🔍 Enriched preview")
         enriched.select(
-            "did", "created_at", "language", "sfw",
+            "raw_post_id", "did", "created_at", "language", "sfw",
             "sentiment_label", "sentiment_score", "keywords"
         ).show(20, truncate=False)
 
-        # 6) Write to posts
+        # 6) WRITE enriched posts into posts table (include raw_post_id)
         logger.info("Writing to posts table")
         posts_to_write = enriched.select(
-            "did", "text", "created_at", "language", "sfw",
-            "sentiment_score", "sentiment_label"
+            "raw_post_id", "did", "text", "created_at",
+            "language", "sfw", "sentiment_score", "sentiment_label"
         )
-        posts_to_write.write.jdbc(jdbc_url, "posts", mode="append", properties=props)
+        posts_to_write.write.jdbc(
+            url=jdbc_url,
+            table="posts",
+            mode="append",
+            properties=props
+        )
 
-        # 7) Reload for keyword linking
-        logger.info("Reloading posts table to get post_ids")
-        all_posts = spark.read.jdbc(jdbc_url, "posts", properties=props)
-        new_posts = all_posts.select("post_id", "did", "created_at")
-        joined = enriched.join(new_posts, on=["did", "created_at"], how="inner")
-        logger.info(f"Preparing {joined.count()} post-keyword records")
+        # 7) RELOAD posts to fetch their new post_id ↔ raw_post_id mapping
 
-        # 8) Explode keywords
+        all_posts = spark.read \
+            .format("jdbc") \
+            .option("url", jdbc_url) \
+            .option("dbtable", "posts") \
+            .option("user", props["user"]) \
+            .option("password", props["password"]) \
+            .option("isolationLevel", "READ_COMMITTED") \
+            .load()
+        id_map = all_posts.select("post_id", "raw_post_id")
+
+        logger.info("🦖🦖🦖🦖id_map preview (should include the 3 new raw_post_ids)🦖🦖🦖🦖")
+        id_map.show(truncate=False)
+        logger.info(f"id_map.count() = {id_map.count()}")
+
+        logger.info("—— SCHEMA OF enriched ——🍁🍁🍁🍁🍁")
+        enriched.printSchema()
+
+        logger.info("—— SCHEMA OF id_map ——🍁🍁🍁🍁")
+        id_map.printSchema()
+
+        # 8) JOIN enriched → id_map on raw_post_id
+        logger.info("🔍 Joined preview (post_id lookup)")
+        joined = enriched.join(id_map, on="raw_post_id", how="inner")
+        logger.info("🔍 joined preview (post_id + keywords)")
+        joined.select("post_id", "raw_post_id", "keywords").show(truncate=False)
+
+        # 9) EXPLODE keywords
         logger.info("Exploding keywords for linking")
         exploded = joined.select(
-            "post_id", explode(col("keywords")).alias("keyword_name")
+            "post_id",
+            explode(col("keywords")).alias("keyword_name")
         ).distinct()
 
-        # 9) Insert new keywords
-        logger.info("Inserting new keywords into keywords table")
+        logger.info("🔍 exploded keywords preview 🤯🤯🤯🤯")
+        exploded.show(truncate=False)
+        logger.info(f"exploded.count() = {exploded.count()}")
+
+        # 10) INSERT any NEW keywords into keywords table
+        logger.info("Checking for new keywords")
         existing_kw = spark.read.jdbc(jdbc_url, "keywords", properties=props)
-        new_kw = (
-            exploded.select("keyword_name").distinct()
-            .join(existing_kw.select("keyword_name"), on="keyword_name", how="left_anti")
-        )
+
+        new_kw = exploded.select("keyword_name").distinct() \
+            .join(existing_kw.select("keyword_name"),
+                  on="keyword_name", how="left_anti")
+
+        logger.info("🔍 new_kw (what will be inserted into keywords table)🤯🤯")
+
+        new_kw.show(truncate=False)
+
+        logger.info(f"new_kw_count = {new_kw.count()}")
         new_kw_count = new_kw.count()
         logger.info(f"Found {new_kw_count} new keywords")
         if new_kw_count > 0:
             new_kw.write.jdbc(jdbc_url, "keywords", mode="append", properties=props)
 
-        # 10) Reload keywords
+        # 11) RELOAD keywords to get their ids
         logger.info("Reloading keywords table")
         all_kw = spark.read.jdbc(jdbc_url, "keywords", properties=props)
 
-        # 11) Build and write post_keywords
+        # 12) BUILD & WRITE the bridging table post_keywords
         logger.info("Building post_keywords linking DataFrame")
         post_kw = (
             exploded.join(all_kw, on="keyword_name", how="inner")
-            .select("post_id", "keyword_id").distinct()
+                    .select("post_id", "keyword_id")
+                    .distinct()
         )
         link_count = post_kw.count()
-        logger.info(f"Inserting {link_count} records into post_keywords")
-        post_kw.write.jdbc(jdbc_url, "post_keywords", mode="append", properties=props)
+        logger.info(f"Inserting {link_count} keyword links")
+
+        if link_count > 0:
+            post_kw.write.jdbc(
+                url=jdbc_url,
+                table="post_keywords",
+                mode="append",
+                properties=props
+            )
 
     except Exception:
         logger.exception("Error during batch processing")
     finally:
         logger.info("Stopping Spark session")
         spark.stop()
+
 
 if __name__ == "__main__":
     main()

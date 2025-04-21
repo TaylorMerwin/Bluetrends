@@ -48,7 +48,7 @@ services:
       - "8080:8080"
     command: webserver
     environment:
-      - AIRFLOW_CONN_MYSQL_MOVIES=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      - AIRFLOW_CONN_MYSQL_MOVIES=mysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
     depends_on:
       - broker
       - python
@@ -72,6 +72,7 @@ services:
     volumes:
       - ./src/processing:/opt/spark-apps
       - spark-events:/tmp/spark-events
+      - ./models:/models
     depends_on:
       - broker
     env_file:
@@ -86,6 +87,8 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./models:/models
     depends_on:
       - spark-master
     env_file:
@@ -100,6 +103,8 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./models:/models
     depends_on:
       - spark-master
     env_file:

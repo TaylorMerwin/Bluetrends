@@ -2,11 +2,15 @@ FROM bitnami/spark:3.5
 
 # Install pip and required build dependencies if needed
 USER root
-RUN apt-get update && apt-get install -y python3-pip curl
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy exported requirements.txt from your project (make sure you've generated this file)
 COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+
+
 
 
 # download the MySQL JDBC driver into Spark's jars folder
