@@ -12,6 +12,8 @@ from langdetect.lang_detect_exception import LangDetectException
 from transformers import TFAutoModelForSequenceClassification, AutoTokenizer, pipeline, AutoConfig, \
     AutoModelForSequenceClassification
 
+
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -101,29 +103,32 @@ sentiment_schema = StructType([
 ])
 
 # Unified sentiment UDF
-
-# initialize once
-_pipe = pipeline(
-    "sentiment-analysis",
-    model="cardiffnlp/twitter-roberta-base-sentiment-latest",
+tokenizer = AutoTokenizer.from_pretrained(
+    "cardiffnlp/twitter-roberta-base-sentiment-latest"
 )
 
 
+# 2. Create your pipeline, passing in both the model *and* the tokenizer
+_pipe = pipeline(
+    "sentiment-analysis",
+    model="cardiffnlp/twitter-roberta-base-sentiment-latest",
+    tokenizer=tokenizer
+)
+
 @pandas_udf(sentiment_schema)
 def sentiment_udf(texts: pd.Series) -> pd.DataFrame:
-
-    global _pipe
-    results = _pipe(texts.tolist(),
-    truncation = True,
-    max_length = _pipe.tokenizer.model_max_length
+    batch = texts.fillna("").tolist()
+    # pipeline(...) returns a list of {"label":…, "score":…} dicts
+    results = _pipe(
+      batch,
+      padding=True,
+      truncation=True,
+      max_length=512
     )
-
-    logger.info(f"Sentiment: {results}")
     return pd.DataFrame({
-        "label": [result['label'] for result in results],
-        "score": [result['score'] for result in results],
+      "label": [r["label"] for r in results],
+      "score": [r["score"] for r in results],
     })
-
 
 
 # Function that writes a micro-batch of data to the raw_posts table using environment variables
