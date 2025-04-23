@@ -1,3 +1,5 @@
+drop database if exists bluetrends;
+
 CREATE DATABASE IF NOT EXISTS bluetrends;
 USE bluetrends;
 
@@ -15,7 +17,8 @@ CREATE TABLE IF NOT EXISTS posts (
   language        VARCHAR(10),
   sfw             BOOLEAN DEFAULT TRUE,
   sentiment_score FLOAT,
-  sentiment_label VARCHAR(50)
+  sentiment_label VARCHAR(50),
+  keywords JSON NULL
 );
 
 CREATE TABLE IF NOT EXISTS post_keywords (
@@ -33,3 +36,13 @@ CREATE TABLE IF NOT EXISTS post_keywords (
       ON DELETE CASCADE
       ON UPDATE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS keyword_trends (
+  keyword               VARCHAR(100) NOT NULL,
+  period_start          DATETIME     NOT NULL,
+  period_end            DATETIME     NOT NULL,
+  post_count            INT          NOT NULL,
+  avg_sentiment_score   FLOAT        NOT NULL,
+  PRIMARY KEY (keyword, period_start)
+) ENGINE=InnoDB
+  COMMENT='Aggregated counts & avg sentiment for each keyword over a fixed window';
