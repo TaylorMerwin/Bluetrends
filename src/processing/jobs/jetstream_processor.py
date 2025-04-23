@@ -184,7 +184,12 @@ def extract_keywords_json_udf(text_series: pd.Series) -> pd.Series:
     for text in texts:
         if text:
             # Extract keywords using KeyBERT
-            keywords = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 2), stop_words="english", top_n=5)
+            keywords = (kw_model.extract_keywords(
+                text,
+                keyphrase_ngram_range=(1, 2),
+                stop_words="english",
+                top_n=2
+            ))
             # Convert to JSON string
             json_str = json.dumps(keywords)
             results.append(json_str)
@@ -211,16 +216,16 @@ def enrich_batch(batch_df):
         .withColumn("keywords", extract_keywords_json_udf(col("text")))
 
     )
-    return batch_df
 
-    # # Only extract keywords for English & SFW posts
-    # batch_df = batch_df.withColumn(
-    #     "keywords",
-    #     when(
-    #         (col("language") == "en") & (col("sfw") == True),
-    #         extract_keywords_json_udf(col("text"))
-    #     ).otherwise(lit("[]"))
-    # )
+    # Only extract keywords for English & SFW posts
+    batch_df = batch_df.withColumn(
+        "keywords",
+        when(
+            (col("language") == "en") & (col("sfw") == True),
+            extract_keywords_json_udf(col("text"))
+        ).otherwise(lit("[]"))
+    )
+    return batch_df
 
 
 def write_posts_table(enriched_df):
