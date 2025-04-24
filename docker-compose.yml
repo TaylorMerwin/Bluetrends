@@ -39,19 +39,28 @@ services:
       - broker
 
   airflow:
-    image: apache/airflow:2.10.5
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    image: custom-airflow:2.10.5
     container_name: airflow
     volumes:
-      - ./src/airflow:/opt/airflow/dags # DAG files go in the airflow directory
-      - ./data/airflow:/usr/local/airflow # Persist metadata if needed
+      - ./src/airflow:/opt/airflow/dags
+      - ./data/airflow:/usr/local/airflow
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/opt/project
+    working_dir: /opt/project
     ports:
       - "8080:8080"
     command: webserver
     environment:
-      - AIRFLOW_CONN_MYSQL_MOVIES=mysql://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=mysql+mysqlconnector://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
     depends_on:
       - broker
       - python
+      - db
 
   spark-master:
     image: bitnami/spark:3.5

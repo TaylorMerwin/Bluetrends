@@ -47,7 +47,7 @@ df = spark.readStream \
     .option("kafka.bootstrap.servers", "broker:9092") \
     .option("subscribe", "text_posts") \
     .option("startingOffsets", "latest") \
-    .option("maxOffsetsPerTrigger", 1000) \
+    .option("maxOffsetsPerTrigger", 700) \
     .load()
 
 
@@ -176,17 +176,63 @@ kw_model = KeyBERT(model="all-MiniLM-L6-v2")
 
 custom_stop_words = [
     # very common English words
-    'a','an','the','and','or','but','if','then','else','for','while',
+    'a','an','the','and','or','oh','but','if','then','else','for','while',
     'of','at','by','with','without','in','on','to','from','up','down',
     'is','are','be','been','being','it','its','this','that','these','those',
-    'i','you','he','she','they','we','us','our','their','me','my','mine',
+    'i','you','he','she','they','we','us','our','their','me','my','mine', 'know', 'think', 'too'
     # contractions & filler
     'im','ive','dont','cant','wont','just','really','also','very','so',
-    'only','even','still','yet','much','many','more','some','any','no','not',
-    # Bluesky-specific noise
-    'thank','thanks','bsky','social', 'bluesky', 'exactly','sexy','love','donation', 'donations',
-    'donate','donating', 'help','helping', 'youtube', 'video', 'videos', 'twitch', 'exactly',
+    'only','even','still','yet','much','many','more','some','any','no','not', 'have', 'unfortunately', ]
+
+stop_words = [
+    'me', 'my', 'myself',
+    'we', 'our', 'ours', 'ourselves',
+    'you', 'your', 'yours', 'yourself', 'yourselves',
+    'he', 'him', 'his', 'himself',
+    'she', 'her', 'hers', 'herself',
+    'it', 'its', 'itself',
+    'they', 'them', 'their', 'theirs', 'themselves',
+    'what', 'which', 'who', 'whom',
+    'this', 'that', 'these', 'those',
+    'am', 'is', 'are', 'was', 'were',
+    'be', 'been', 'being',
+    'have', 'has', 'had', 'having',
+    'do', 'does', 'did', 'doing',
+    'a', 'an', 'the',
+    'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while',
+    'of', 'at', 'by', 'for', 'with', 'about', 'against',
+    'between', 'into', 'through', 'during', 'before', 'after',
+    'above', 'below',
+    'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under',
+    'again', 'further', 'then', 'once',
+    'here', 'there', 'when', 'where', 'why', 'how', 'how', 'however'
+    'all', 'any', 'both', 'each', 'few', 'more', 'most',
+    'other', 'some', 'such',
+    'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
+    's', 't', 'can', 'will', 'just', 'don', 'should', 'now', 're',
 ]
+
+words = [
+    'am', 'can', 'down', 'from', 'as', 'be', 'are', 'too', 'through', 'does', 'a', 'but', 'now', 'some', 'an', 'we',
+    'below', 'against', 'here', 'did', 'how', 'yourselves', 'was', 'above', 'him', 'it', 'which', 'himself', 'its',
+    'most', 'the', 're', 'or', 'while', 'your', 'if', 'yours', 'she', 'her', 'other', 'any', 'off', 'few', 'is', 'of',
+    'there', 'than', 'why', 'has', 'so', 'in', 'only', 'have', 'itself', 'for', 'under', 'own', 'were', 'those', 'out',
+    'very', 'until', 'hers', 'after', 'up', 'they', 'their', 'not', 'doing', 'no', 'them', 'where', 'ourselves',
+    'themselves', 'our', 'on', 'that', 'nor', 'ours', 'at', 'again', 'same', 'over', 'just', 'because', 'who',
+    'before', 'by', 'more', 'being', 'had', 'this', 'with', 'should', 'what', 'during', 'herself', 'and', 'these',
+    'such', 'further', 'do', 'yourself', 'his', 'into', 'once', 'each', 'all', 'then', 'both', 'when', 'he', 'me',
+    'whom', 'i', 'my', 'you', 'to', 'myself', 'about', 'been', 'will', 'between'
+]
+
+
+bluesky_stop_words = [
+
+    'bsky','social', 'bluesky', 'sexy','love',
+    'youtube', 'video', 'videos', 'twitch',
+    'facebook', 'exactly', 'www', 'com', 'org',
+]
+
+combined_stop_words = words + bluesky_stop_words
 
 
 @pandas_udf(StringType())
@@ -201,7 +247,7 @@ def extract_keywords_json_udf(text_series: pd.Series) -> pd.Series:
             keywords = (kw_model.extract_keywords(
                 text,
                 keyphrase_ngram_range=(1, 2),
-                stop_words=custom_stop_words,
+                stop_words=combined_stop_words,
                 top_n=3
             ))
             # Convert to JSON string

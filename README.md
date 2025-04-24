@@ -12,4 +12,27 @@ Capstone project for Dev10 Data Engineering 2025-3 Cohort
 I have no name!@5622bbdb1314:/opt/spark-apps/jobs$ spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5 jetstream_consumer.py
 
 
-(bluetrends-py3.10) 16:08:49 taylor@pop-os:~/code/dev10/Bluetrends$ docker compose up -d --build dash
+docker compose up -d --build dash
+
+create airflow user;
+
+```
+
+```
+
+
+docker compose exec airflow airflow db init
+
+docker compose exec airflow airflow users create \
+  --username admin \
+  --firstname Taylor \
+  --lastname Merwin \
+  --role Admin \
+  --email youremail@example.com \
+  --password yourpassword
+
+docker compose restart airflow
+
+run airflow `docker compose up -d airflow` for webserver and `docker compose up -d airflow-scheduler`
+
+airflow needs both the webserver and the scheduler to run.

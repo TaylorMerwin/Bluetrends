@@ -10,8 +10,7 @@ def upsert_trends(trends_df, start, end):
     """Collect trends DataFrame and upsert into MySQL."""
     rows = trends_df.select(
         "keyword", "period_start", "period_end",
-        "post_count", "avg_sentiment_score",
-        "positive_count", "neutral_count", "negative_count"
+        "post_count", "avg_sentiment_score", "sentiment_label"
     ).collect()
 
     conn = mysql.connector.connect(
@@ -24,16 +23,12 @@ def upsert_trends(trends_df, start, end):
 
     sql = """
     INSERT INTO keyword_trends
-      (keyword, period_start, period_end, post_count, avg_sentiment_score,
-       positive_count, neutral_count, negative_count)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+      (keyword, period_start, period_end, post_count, avg_sentiment_score, sentiment_label)
+    VALUES (%s, %s, %s, %s, %s, %s)
     ON DUPLICATE KEY UPDATE
       period_end          = VALUES(period_end),
       post_count          = VALUES(post_count),
-      avg_sentiment_score = VALUES(avg_sentiment_score),
-      positive_count      = VALUES(positive_count),
-      neutral_count       = VALUES(neutral_count),
-      negative_count      = VALUES(negative_count)
+      avg_sentiment_score = VALUES(avg_sentiment_score)
     """
 
     params = [
@@ -43,14 +38,12 @@ def upsert_trends(trends_df, start, end):
             row.period_end.strftime("%Y-%m-%d %H:%M:%S"),
             int(row.post_count),
             float(row.avg_sentiment_score),
-            int(row.positive_count),
-            int(row.neutral_count),
-            int(row.negative_count)
-        ) for row in rows
+            row.sentiment_label
+        )
+        for row in rows
     ]
 
     logging.info(f"[Debug] upserting {len(params)} rows for window {start}")
-
     cur.executemany(sql, params)
     conn.commit()
     cur.close()
@@ -88,63 +81,53 @@ def main(start: str, end: str):
         "post_id", "created_at", "sentiment_score", "sentiment_label", "kw_array"
     )
 
-    # Explode into (post, keyword) rows
+    # Explode into (post, keyword, label) rows
     exploded = posts2.select(
         "post_id", "created_at", "sentiment_score", "sentiment_label",
         F.explode("kw_array").alias("kv")
     )
-
-    # Extract keyword & filter length
     keyword_rows = exploded.select(
         "post_id", "created_at", "sentiment_score", "sentiment_label",
         F.col("kv").getItem(0).alias("keyword")
     ).filter(F.length("keyword") <= 100)
 
-    # Basic aggregations: count & avg
-    base = keyword_rows.groupBy("keyword").agg(
-        F.to_timestamp(F.lit(start), "yyyy-MM-dd HH:mm:ss").alias("period_start"),
-        F.to_timestamp(F.lit(end),   "yyyy-MM-dd HH:mm:ss").alias("period_end"),
-        F.countDistinct("post_id").alias("post_count"),
-        F.avg("sentiment_score").alias("avg_sentiment_score")
-    )
-
-    # Pivot by explicit sentiment labels
-    label_counts = (
-        keyword_rows
-        .groupBy("keyword")
-        .pivot("sentiment_label", ["Positive", "Neutral", "Negative"])
-        .agg(F.countDistinct("post_id"))
-        .na.fill(0)
-    )
-
-    # Join base + label_counts and rename
+    # Aggregate: one row per keyword & sentiment_label
     trends = (
-        base.join(label_counts, on="keyword", how="left")
-        .withColumnRenamed("Positive", "positive_count")
-        .withColumnRenamed("Neutral",  "neutral_count")
-        .withColumnRenamed("Negative", "negative_count")
+        keyword_rows
+        .groupBy("keyword", "sentiment_label")
+        .agg(
+            F.countDistinct("post_id").alias("post_count"),
+            F.avg("sentiment_score").alias("avg_sentiment_score")
+        )
+        .withColumn("period_start", F.to_timestamp(F.lit(start), "yyyy-MM-dd HH:mm:ss"))
+        .withColumn("period_end",   F.to_timestamp(F.lit(end),   "yyyy-MM-dd HH:mm:ss"))
+        .select(
+            "keyword",
+            "period_start",
+            "period_end",
+            "post_count",
+            "avg_sentiment_score",
+            "sentiment_label"
+        )
     )
 
-    # Sanity-check
-    logging.info("[Debug] sample trends with label counts:")
-    trends.select(
-        "keyword", "post_count", "avg_sentiment_score",
-        "positive_count", "neutral_count", "negative_count"
-    ).show(5, truncate=False)
+    logging.info("[Debug] sample trends:")
+    trends.show(5, truncate=False)
 
-    # Drop any accidental duplicates
-    trends = trends.dropDuplicates(["keyword", "period_start"] )
+    # Dedupe just in case
+    trends = trends.dropDuplicates(["keyword", "sentiment_label", "period_start"])
 
-    # Upsert into MySQL
+    # Write into MySQL
     upsert_trends(trends, start, end)
     spark.stop()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", required=True,
-                        help="Inclusive window start: 'YYYY-MM-DD HH:MM:SS'" )
+                        help="Inclusive window start: 'YYYY-MM-DD HH:MM:SS'")
     parser.add_argument("--end",   required=True,
-                        help="Exclusive window end:   'YYYY-MM-DD HH:MM:SS'" )
+                        help="Exclusive window end:   'YYYY-MM-DD HH:MM:SS'")
     args = parser.parse_args()
 
     logging.basicConfig(
