@@ -125,6 +125,25 @@ services:
       - ./mysql/initdb:/docker-entrypoint-initdb.d
     restart: always
 
+  dash:
+    container_name: dash
+    build:
+      context: ./src/dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "8051:8051"
+    depends_on:
+      - db
+    volumes:
+      - ./src/dashboard:/app
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_ENGINE_URL}
+      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    env_file:
+      - ./.env
+
 volumes:
   kafka-data:
   mysql-data:

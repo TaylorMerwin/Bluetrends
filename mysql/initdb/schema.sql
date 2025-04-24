@@ -1,5 +1,3 @@
-drop database if exists bluetrends;
-
 CREATE DATABASE IF NOT EXISTS bluetrends;
 USE bluetrends;
 
@@ -43,6 +41,9 @@ CREATE TABLE IF NOT EXISTS keyword_trends (
   period_end            DATETIME     NOT NULL,
   post_count            INT          NOT NULL,
   avg_sentiment_score   FLOAT        NOT NULL,
+  positive_count        INT      NOT NULL DEFAULT 0,
+  neutral_count         INT      NOT NULL DEFAULT 0,
+  negative_count        INT      NOT NULL DEFAULT 0,
   PRIMARY KEY (keyword, period_start)
 ) ENGINE=InnoDB
   COMMENT='Aggregated counts & avg sentiment for each keyword over a fixed window';

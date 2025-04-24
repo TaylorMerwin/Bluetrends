@@ -579,6 +579,18 @@ typing-extensions = ">=4.8.0"
 standard = ["fastapi[standard] (>=0.112.3)", "typer (>=0.7.0)"]
 
 [[package]]
+name = "callbacks"
+version = "0.3.0"
+description = "Simple callbacks using decorators"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "callbacks-0.3.0-py2-none-any.whl", hash = "sha256:44a3d8d8686e78ab223042910945bd1dffc25d668adb0b76c115f3bf3fdf0a1b"},
+    {file = "callbacks-0.3.0.tar.gz", hash = "sha256:16248b2570394e06cc9c78f586f2582c36a677163e80f8735625d3904b3a5b65"},
+]
+
+[[package]]
 name = "certifi"
 version = "2025.1.31"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -909,6 +921,55 @@ test = ["certifi (>=2024)", "cryptography-vectors (==44.0.2)", "pretend (>=0.7)"
 test-randomorder = ["pytest-randomly"]
 
 [[package]]
+name = "dash"
+version = "3.0.3"
+description = "A Python framework for building reactive web-apps. Developed by Plotly."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "dash-3.0.3-py3-none-any.whl", hash = "sha256:9c6577e056971590c002c07fd26376d3d501bddb39804466e401876fb1e043ac"},
+    {file = "dash-3.0.3.tar.gz", hash = "sha256:86d3038ae9f09e1f246937afbab5451c9db5a3832911c325d2e1f0bcefe2b7c9"},
+]
+
+[package.dependencies]
+Flask = ">=1.0.4,<3.1"
+importlib-metadata = "*"
+nest-asyncio = "*"
+plotly = ">=5.0.0"
+requests = "*"
+retrying = "*"
+setuptools = "*"
+typing-extensions = ">=4.1.1"
+Werkzeug = "<3.1"
+
+[package.extras]
+celery = ["celery[redis] (>=5.1.2)", "redis (>=3.5.3)"]
+ci = ["black (==22.3.0)", "flake8 (==7.0.0)", "flaky (==3.8.1)", "flask-talisman (==1.0.0)", "ipython (<9.0.0)", "jupyterlab (<4.0.0)", "mimesis (<=11.1.0)", "mock (==4.0.3)", "numpy (<=1.26.3)", "openpyxl", "orjson (==3.10.3)", "pandas (>=1.4.0)", "pyarrow", "pylint (==3.0.3)", "pyright (==1.1.398) ; python_version >= \"3.7\"", "pytest-mock", "pytest-rerunfailures", "pytest-sugar (==0.9.6)", "pyzmq (==25.1.2)", "xlrd (>=2.0.1)"]
+compress = ["flask-compress"]
+dev = ["PyYAML (>=5.4.1)", "coloredlogs (>=15.0.1)", "fire (>=0.4.0)"]
+diskcache = ["diskcache (>=5.2.1)", "multiprocess (>=0.70.12)", "psutil (>=5.8.0)"]
+testing = ["beautifulsoup4 (>=4.8.2)", "cryptography", "dash-testing-stub (>=0.0.2)", "lxml (>=4.6.2)", "multiprocess (>=0.70.12)", "percy (>=2.0.2)", "psutil (>=5.8.0)", "pytest (>=6.0.2)", "requests[security] (>=2.21.0)", "selenium (>=3.141.0,<=4.2.0)", "waitress (>=1.4.4)"]
+
+[[package]]
+name = "dash-bootstrap-components"
+version = "2.0.2"
+description = "Bootstrap themed components for use in Plotly Dash"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "dash_bootstrap_components-2.0.2-py3-none-any.whl", hash = "sha256:033d87511f7a9be72657de52c0c41539e1bf2aac8fe6c0c3a00f153c1bd4ed61"},
+    {file = "dash_bootstrap_components-2.0.2.tar.gz", hash = "sha256:f35218f0e5e2b159121f3e010e61b3226b0a678b2f582d0bd207d42d29132cc0"},
+]
+
+[package.dependencies]
+dash = ">=3.0.3"
+
+[package.extras]
+pandas = ["numpy (>=2.0.2)", "pandas (>=2.2.3)"]
+
+[[package]]
 name = "deprecated"
 version = "1.2.18"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
@@ -962,6 +1023,28 @@ doq = ["aioquic (>=1.0.0)"]
 idna = ["idna (>=3.7)"]
 trio = ["trio (>=0.23)"]
 wmi = ["wmi (>=1.5.1)"]
+
+[[package]]
+name = "dynaconf"
+version = "3.2.10"
+description = "The dynamic configurator for your Python Project"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "dynaconf-3.2.10-py2.py3-none-any.whl", hash = "sha256:7f70a4b8a8861efb88d8267aeb6f246c791dc34ecbb8299c26a19abd59113df6"},
+    {file = "dynaconf-3.2.10.tar.gz", hash = "sha256:8dbeef31a2343c8342c9b679772c3d005b4801c587cf2f525f98f57ec2f607f1"},
+]
+
+[package.extras]
+all = ["configobj", "hvac", "redis", "ruamel.yaml"]
+configobj = ["configobj"]
+ini = ["configobj"]
+redis = ["redis"]
+test = ["configobj", "django", "flask (>=0.12)", "hvac (>=1.1.0)", "pytest", "pytest-cov", "pytest-mock", "pytest-xdist", "python-dotenv", "radon", "redis", "toml"]
+toml = ["toml"]
+vault = ["hvac"]
+yaml = ["ruamel.yaml"]
 
 [[package]]
 name = "email-validator"
@@ -1061,22 +1144,22 @@ typing = ["typing-extensions (>=4.12.2) ; python_version < \"3.11\""]
 
 [[package]]
 name = "flask"
-version = "3.1.0"
+version = "3.0.3"
 description = "A simple framework for building complex web applications."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "flask-3.1.0-py3-none-any.whl", hash = "sha256:d667207822eb83f1c4b50949b1623c8fc8d51f2341d65f72e1a1815397551136"},
-    {file = "flask-3.1.0.tar.gz", hash = "sha256:5f873c5184c897c8d9d1b05df1e3d01b14910ce69607a117bd3277098a5836ac"},
+    {file = "flask-3.0.3-py3-none-any.whl", hash = "sha256:34e815dfaa43340d1d15a5c3a02b8476004037eb4840b34910c6e21679d288f3"},
+    {file = "flask-3.0.3.tar.gz", hash = "sha256:ceb27b0af3823ea2737928a4d99d125a06175b8512c445cbd9a9ce200ef76842"},
 ]
 
 [package.dependencies]
-blinker = ">=1.9"
+blinker = ">=1.6.2"
 click = ">=8.1.3"
-itsdangerous = ">=2.2"
+itsdangerous = ">=2.1.2"
 Jinja2 = ">=3.1.2"
-Werkzeug = ">=3.1"
+Werkzeug = ">=3.0.0"
 
 [package.extras]
 async = ["asgiref (>=3.2)"]
@@ -2065,6 +2148,42 @@ gssapi = ["gssapi (==1.8.3)"]
 telemetry = ["opentelemetry-api (==1.18.0)", "opentelemetry-exporter-otlp-proto-http (==1.18.0)", "opentelemetry-sdk (==1.18.0)"]
 
 [[package]]
+name = "narwhals"
+version = "1.36.0"
+description = "Extremely lightweight compatibility layer between dataframe libraries"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "narwhals-1.36.0-py3-none-any.whl", hash = "sha256:e3c50dd1d769bc145f57ae17c1f0f0da6c3d397d62cdd0bb167e9b618e95c9d6"},
+    {file = "narwhals-1.36.0.tar.gz", hash = "sha256:7cd860e7e066609bd8a042bb5b8e4193275532114448210a91cbd5c622b6e5eb"},
+]
+
+[package.extras]
+cudf = ["cudf (>=24.10.0)"]
+dask = ["dask[dataframe] (>=2024.8)"]
+duckdb = ["duckdb (>=1.0)"]
+ibis = ["ibis-framework (>=6.0.0)", "packaging", "pyarrow-hotfix", "rich"]
+modin = ["modin"]
+pandas = ["pandas (>=0.25.3)"]
+polars = ["polars (>=0.20.3)"]
+pyarrow = ["pyarrow (>=11.0.0)"]
+pyspark = ["pyspark (>=3.5.0)"]
+sqlframe = ["sqlframe (>=3.22.0)"]
+
+[[package]]
+name = "nest-asyncio"
+version = "1.6.0"
+description = "Patch asyncio to allow nested event loops"
+optional = false
+python-versions = ">=3.5"
+groups = ["main"]
+files = [
+    {file = "nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c"},
+    {file = "nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe"},
+]
+
+[[package]]
 name = "networkx"
 version = "3.4.2"
 description = "Python package for creating and manipulating graphs and networks"
@@ -2787,6 +2906,25 @@ typing = ["typing-extensions ; python_version < \"3.10\""]
 xmp = ["defusedxml"]
 
 [[package]]
+name = "plotly"
+version = "6.0.1"
+description = "An open-source interactive data visualization library for Python"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "plotly-6.0.1-py3-none-any.whl", hash = "sha256:4714db20fea57a435692c548a4eb4fae454f7daddf15f8d8ba7e1045681d7768"},
+    {file = "plotly-6.0.1.tar.gz", hash = "sha256:dd8400229872b6e3c964b099be699f8d00c489a974f2cfccfad5e8240873366b"},
+]
+
+[package.dependencies]
+narwhals = ">=1.15.1"
+packaging = "*"
+
+[package.extras]
+express = ["numpy"]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 description = "plugin and hook calling mechanisms for python"
@@ -3456,6 +3594,21 @@ httpx = ["httpx", "tenacity"]
 requests = ["requests", "tenacity", "types-requests"]
 
 [[package]]
+name = "retrying"
+version = "1.3.4"
+description = "Retrying"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "retrying-1.3.4-py3-none-any.whl", hash = "sha256:8cc4d43cb8e1125e0ff3344e9de678fefd85db3b750b81b2240dc0183af37b35"},
+    {file = "retrying-1.3.4.tar.gz", hash = "sha256:345da8c5765bd982b1d1915deb9102fd3d1f7ad16bd84a9700b85f64d24e8f3e"},
+]
+
+[package.dependencies]
+six = ">=1.7.0"
+
+[[package]]
 name = "rich"
 version = "14.0.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
@@ -3922,7 +4075,6 @@ description = "Easily download, build, install, upgrade, and uninstall Python pa
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "python_version == \"3.12\""
 files = [
     {file = "setuptools-79.0.0-py3-none-any.whl", hash = "sha256:b9ab3a104bedb292323f53797b00864e10e434a3ab3906813a7169e4745b912a"},
     {file = "setuptools-79.0.0.tar.gz", hash = "sha256:9828422e7541213b0aacb6e10bbf9dd8febeaa45a48570e09b6d100e063fc9f9"},
@@ -4870,14 +5022,14 @@ files = [
 
 [[package]]
 name = "werkzeug"
-version = "3.1.3"
+version = "3.0.6"
 description = "The comprehensive WSGI web application library."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "werkzeug-3.1.3-py3-none-any.whl", hash = "sha256:54b78bf3716d19a65be4fceccc0d1d7b89e608834989dfae50ea87564639213e"},
-    {file = "werkzeug-3.1.3.tar.gz", hash = "sha256:60723ce945c19328679790e3282cc758aa4a6040e4bb330f53d30fa546d44746"},
+    {file = "werkzeug-3.0.6-py3-none-any.whl", hash = "sha256:1bc0c2310d2fbb07b1dd1105eba2f7af72f322e1e455f2f93c993bee8c8a5f17"},
+    {file = "werkzeug-3.0.6.tar.gz", hash = "sha256:a8dd59d4de28ca70471a34cba79bed5f7ef2e036a76b3ab0835474246eb41f8d"},
 ]
 
 [package.dependencies]
@@ -5017,4 +5169,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "76fb299c5e3919adc52d83c8bfefbf963ecd26cd9aca76febae5c428dd53d642"
+content-hash = "a5cbc9da1524beef80c0025d453c4c2f7269c5dc933d7b6c1da02151853c9d8b"

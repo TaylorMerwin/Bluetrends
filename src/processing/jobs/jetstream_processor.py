@@ -47,7 +47,7 @@ df = spark.readStream \
     .option("kafka.bootstrap.servers", "broker:9092") \
     .option("subscribe", "text_posts") \
     .option("startingOffsets", "latest") \
-    .option("maxOffsetsPerTrigger", 100) \
+    .option("maxOffsetsPerTrigger", 1000) \
     .load()
 
 
@@ -174,6 +174,20 @@ def sentiment_udf(texts: pd.Series) -> pd.DataFrame:
 # Keyword detection and extraction
 kw_model = KeyBERT(model="all-MiniLM-L6-v2")
 
+custom_stop_words = [
+    # very common English words
+    'a','an','the','and','or','but','if','then','else','for','while',
+    'of','at','by','with','without','in','on','to','from','up','down',
+    'is','are','be','been','being','it','its','this','that','these','those',
+    'i','you','he','she','they','we','us','our','their','me','my','mine',
+    # contractions & filler
+    'im','ive','dont','cant','wont','just','really','also','very','so',
+    'only','even','still','yet','much','many','more','some','any','no','not',
+    # Bluesky-specific noise
+    'thank','thanks','bsky','social', 'bluesky', 'exactly','sexy','love','donation', 'donations',
+    'donate','donating', 'help','helping', 'youtube', 'video', 'videos', 'twitch', 'exactly',
+]
+
 
 @pandas_udf(StringType())
 def extract_keywords_json_udf(text_series: pd.Series) -> pd.Series:
@@ -187,8 +201,8 @@ def extract_keywords_json_udf(text_series: pd.Series) -> pd.Series:
             keywords = (kw_model.extract_keywords(
                 text,
                 keyphrase_ngram_range=(1, 2),
-                stop_words="english",
-                top_n=2
+                stop_words=custom_stop_words,
+                top_n=3
             ))
             # Convert to JSON string
             json_str = json.dumps(keywords)
