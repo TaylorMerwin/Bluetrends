@@ -1,3 +1,4 @@
+# src/dashboard/data_loader.py
 import pandas as pd
 from sqlalchemy import create_engine
 import logging
@@ -43,3 +44,35 @@ def load_posts_by_hour(
     _df_posts_by_hour_cache[key] = df
     logger.info(f"Loaded {len(df)} rows for posts by hour from {start} to {end}")
     return df
+
+
+def load_sentiment_totals(start, end):
+    """
+    Returns DataFrame with columns:
+        sentiment_label | num_posts
+    """
+    sql = """
+        SELECT sentiment_label, COUNT(*) AS num_posts
+        FROM posts
+        WHERE created_at BETWEEN %s AND %s
+        GROUP BY sentiment_label
+    """
+    return pd.read_sql(sql, engine, params=(start, end))
+
+
+def load_sentiment_by_hour(start, end):
+    """
+    Returns DataFrame with columns:
+        hour_of_day | sentiment_label | num_posts
+    """
+    sql = """
+        SELECT
+            HOUR(created_at)      AS hour_of_day,
+            sentiment_label,
+            COUNT(*)              AS num_posts
+        FROM posts
+        WHERE created_at BETWEEN %s AND %s
+        GROUP BY hour_of_day, sentiment_label
+        ORDER BY hour_of_day
+    """
+    return pd.read_sql(sql, engine, params=(start, end))

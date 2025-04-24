@@ -36,3 +36,4 @@ docker compose restart airflow
 run airflow `docker compose up -d airflow` for webserver and `docker compose up -d airflow-scheduler`
 
 airflow needs both the webserver and the scheduler to run.
+
