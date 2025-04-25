@@ -1,39 +1,60 @@
 # Bluetrends
-Capstone project for Dev10 Data Engineering 2025-3 Cohort
+
+**Real-Time Trend & Sentiment Analysis of Bluesky Posts**  
+*A Data Engineering Capstone Project – Dev10 Data Engineering Cohort 2025-3*  
+
+Bluetrends is a full-stack data engineering project that ingests real-time posts from the decentralized social network **Bluesky**, performs sentiment and keyword analysis, and displays insights on a dynamic dashboard.
 
 
-# Steps to run:
-1. Start up docker - `docker compose up -d` or `docker compose up --build -d`
+## Features
 
-2. Start the producer ` docker compose exec python python jetstream_producer.py`
+- **Real-time ingestion** from the Bluesky Jetstream (WebSocket)
+- **Streaming data pipeline** powered by Kafka and PySpark
+- **Sentiment analysis** using Hugging Face's `twitter-roberta-base-sentiment`
+- **Keyword extraction** using KeyBERT
+- **Data orchestration** with Apache Airflow
+- **Interactive dashboard** built with Dash (Plotly)
+- **MySQL data storage** for post and trend insights
 
-3. Start spark processor `docker exec -it spark-master spark-submit /opt/spark-apps/jobs/jetstream_processor.py`
+---
 
-I have no name!@5622bbdb1314:/opt/spark-apps/jobs$ spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5 jetstream_consumer.py
+## Quickstart
 
+### 1. Clone the Repository
 
-docker compose up -d --build dash
-
-create airflow user;
-
+```bash
+git clone https://github.com/TaylorMerwin/bluetrends.git
+cd bluetrends
 ```
 
-```
+### 2. Start the Project
 
+Start the project using Docker Compose:
 
-docker compose exec airflow airflow db init
+`docker compose up --build -d`
 
-docker compose exec airflow airflow users create \
-  --username admin \
-  --firstname Taylor \
-  --lastname Merwin \
-  --role Admin \
-  --email youremail@example.com \
-  --password yourpassword
+This command will build the necessary Docker images and start all services in detached mode.
+* Python app (Websocket client)
+* Kafka (Message broker)
+* Spark (Streaming processing)
+* MySQL (Database)
+* Airflow (Orchestration)
+* Dash (Dashboard) - available at port 8050
 
-docker compose restart airflow
+### Access the Dashboard
 
-run airflow `docker compose up -d airflow` for webserver and `docker compose up -d airflow-scheduler`
+Once all services are running, open your browser and go to: http://localhost:8051
 
-airflow needs both the webserver and the scheduler to run.
+## References
 
+[Jetstream Overview – Jaz's Blog](https://jazco.dev/2024/09/24/jetstream/)
+
+[Hugging Face: twitter-roberta-base-sentiment](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment)
+
+[KeyBERT](https://maartengr.github.io/KeyBERT/)
+
+[AT Protocol Overview](https://atproto.com/guides/overview)
+
+## Acknowledgments
+
+This project was developed as part of the Data Engineering Capstone for the 2025-3 Dev10 cohort.
