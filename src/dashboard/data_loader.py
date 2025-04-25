@@ -18,7 +18,6 @@ if not ENGINE_URL:
     raise RuntimeError("Please set DB_ENGINE_URL in your environment")
 engine = create_engine(ENGINE_URL, echo=False, pool_pre_ping=True)
 
-# Caches
 _df_posts_by_hour_cache: dict[Tuple[str, str], pd.DataFrame] = {}
 
 def load_posts_by_hour(
@@ -55,7 +54,6 @@ def _rounded_minute(now=None, bucket=15):
     return now.replace(minute=minute_bucket, second=0, microsecond=0)
 
 
-
 def load_sentiment_totals(start, end):
     """
     Returns DataFrame with columns:
@@ -87,7 +85,7 @@ def load_sentiment_by_hour(start, end):
     """
     return pd.read_sql(sql, engine, params=(start, end))
 
-# data_loader.py
+
 def load_fast_facts():
     sql = """
     SELECT
@@ -115,12 +113,8 @@ def load_sfw_totals(start, end):
     return pd.read_sql(sql, engine, params=(start, end))
 
 
-
-# keep engine, settings, etc. as is
-# -------------------------------------------------------------------
 def _dashboard_sql():
     return """
-    /* 1 ─ posts per hour */
     SELECT
         'posts_by_hour'        AS metric,
         HOUR(created_at)       AS col1,
@@ -132,7 +126,6 @@ def _dashboard_sql():
 
     UNION ALL
 
-    /* 2 ─ sentiment totals */
     SELECT
         'sentiment_totals',
         NULL,
@@ -144,7 +137,6 @@ def _dashboard_sql():
 
     UNION ALL
 
-    /* 3 ─ sentiment by hour */
     SELECT
         'sentiment_by_hour',
         HOUR(created_at),
@@ -156,7 +148,6 @@ def _dashboard_sql():
 
     UNION ALL
 
-    /* 4 ─ sfw vs nsfw totals */
     SELECT
         'sfw_totals',
         NULL,
@@ -168,7 +159,6 @@ def _dashboard_sql():
         
     UNION ALL
 
-    /* 5 ─ language totals */
     SELECT
         'language_totals'           AS metric,
         NULL                        AS col1,
@@ -180,7 +170,6 @@ def _dashboard_sql():
 
     UNION ALL
 
-    /* 5 ─ fast facts */
     SELECT 'fast_facts', NULL, 'TOTAL_POSTS',     COUNT(*)            FROM posts
     UNION ALL
     SELECT 'fast_facts', NULL, 'UNIQUE_USERS',    COUNT(DISTINCT did) FROM posts
@@ -189,7 +178,6 @@ def _dashboard_sql():
       FROM keyword_trends
     ;
     """
-
 
 @lru_cache(maxsize=8)   # cache keyed by (start, end) tuple
 def load_dashboard_aggregates(start: datetime, end: datetime) -> dict:
@@ -207,7 +195,6 @@ def load_dashboard_aggregates(start: datetime, end: datetime) -> dict:
     def slice_df(metric: str) -> pd.DataFrame:
         return raw.loc[raw.metric == metric].copy()
 
-    # ---- fast-facts: map to friendly keys ---------------------------------
     ff_raw = (
         slice_df("fast_facts")
         .set_index("col2")["value"]
@@ -219,7 +206,6 @@ def load_dashboard_aggregates(start: datetime, end: datetime) -> dict:
         "unique_keywords": ff_raw.get("UNIQUE_KEYWORDS", 0),
     }
 
-    # ---- build and return master dict ------------------------------------
     return {
         "posts_by_hour": (
             slice_df("posts_by_hour")
@@ -280,7 +266,6 @@ def load_keyword_sentiment(start, end, keyword_list):
     params = (start, end, *keyword_list)
     return pd.read_sql(sql, engine, params=params)
 
-# ─── one-minute cache wrapper ---------------------------------------------
 def get_top_keywords_cached(limit=20):
     now_rounded = _rounded_minute()
     start = now_rounded - timedelta(hours=72)

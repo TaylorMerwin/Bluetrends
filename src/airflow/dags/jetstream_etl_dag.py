@@ -27,5 +27,4 @@ with DAG(
         )
     )
 
-    # start producer first, then fire up the processor
     producer >> processor

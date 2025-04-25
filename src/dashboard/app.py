@@ -25,7 +25,6 @@ app.layout = html.Div(
         html.Div(id="page-content", children=index_layout),
     ])
 
-# Routing callback to switch pages based on the URL
 @app.callback(
     Output("page-content", "children"),
     Input("url", "pathname"),

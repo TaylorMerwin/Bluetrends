@@ -10,7 +10,6 @@ from better_profanity import profanity
 from keybert import KeyBERT
 from transformers import pipeline
 
-# ——— Logging setup ———
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -18,10 +17,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger('BatchPostProcessor')
 
-# ensure deterministic language detection
 DetectorFactory.seed = 0
 
-# ——— UDFs ———
+
 logger.info("Defining UDFs")
 lang_udf       = udf(lambda t: detect(t) if t else None, StringType())
 sfw_udf        = udf(lambda t: not profanity.contains_profanity(t or ""), BooleanType())
@@ -53,7 +51,6 @@ def main():
                 .getOrCreate()
         )
 
-        # — JDBC connection (Compose service “db”) —
         jdbc_url = "jdbc:mysql://db:3306/bluetrends"
         props = {
             "user":     "blueuser",
@@ -61,7 +58,6 @@ def main():
             "driver":   "com.mysql.cj.jdbc.Driver"
         }
 
-        # 1) READ raw_posts & rename its PK to raw_post_id
         logger.info("Loading raw_posts")
         raw_df = (
             spark.read
@@ -69,7 +65,6 @@ def main():
                  .withColumnRenamed("post_id", "raw_post_id")
         )
 
-        # 2) READ already‑processed posts (just raw_post_id)
         logger.info("Loading processed posts (raw_post_id only)")
         proc_ids = (
             spark.read
@@ -77,7 +72,6 @@ def main():
                  .select("raw_post_id")
         )
 
-        # 3) FILTER only new raw_posts by left-anti join on raw_post_id
         logger.info("Filtering NEW posts to process")
         to_proc = raw_df.join(proc_ids, on="raw_post_id", how="left_anti")
         new_count = to_proc.count()
@@ -87,7 +81,6 @@ def main():
             spark.stop()
             return
 
-        # 4) ENRICH with language, SFW, sentiment, keywords
         logger.info("Enriching data")
         enriched = (
             to_proc
@@ -98,14 +91,12 @@ def main():
               .withColumn("keywords",        kw_udf(col("text")))
         )
 
-        # 5) PREVIEW the enriched rows
         logger.info("🔍 Enriched preview")
         enriched.select(
             "raw_post_id", "did", "created_at", "language", "sfw",
             "sentiment_label", "sentiment_score", "keywords"
         ).show(20, truncate=False)
 
-        # 6) WRITE enriched posts into posts table (include raw_post_id)
         logger.info("Writing to posts table")
         posts_to_write = enriched.select(
             "raw_post_id", "did", "text", "created_at",
@@ -117,8 +108,6 @@ def main():
             mode="append",
             properties=props
         )
-
-        # 7) RELOAD posts to fetch their new post_id ↔ raw_post_id mapping
 
         all_posts = spark.read \
             .format("jdbc") \
@@ -140,13 +129,11 @@ def main():
         logger.info("—— SCHEMA OF id_map ——🍁🍁🍁🍁")
         id_map.printSchema()
 
-        # 8) JOIN enriched → id_map on raw_post_id
         logger.info("🔍 Joined preview (post_id lookup)")
         joined = enriched.join(id_map, on="raw_post_id", how="inner")
         logger.info("🔍 joined preview (post_id + keywords)")
         joined.select("post_id", "raw_post_id", "keywords").show(truncate=False)
 
-        # 9) EXPLODE keywords
         logger.info("Exploding keywords for linking")
         exploded = joined.select(
             "post_id",
@@ -157,7 +144,6 @@ def main():
         exploded.show(truncate=False)
         logger.info(f"exploded.count() = {exploded.count()}")
 
-        # 10) INSERT any NEW keywords into keywords table
         logger.info("Checking for new keywords")
         existing_kw = spark.read.jdbc(jdbc_url, "keywords", properties=props)
 
@@ -175,11 +161,9 @@ def main():
         if new_kw_count > 0:
             new_kw.write.jdbc(jdbc_url, "keywords", mode="append", properties=props)
 
-        # 11) RELOAD keywords to get their ids
         logger.info("Reloading keywords table")
         all_kw = spark.read.jdbc(jdbc_url, "keywords", properties=props)
 
-        # 12) BUILD & WRITE the bridging table post_keywords
         logger.info("Building post_keywords linking DataFrame")
         post_kw = (
             exploded.join(all_kw, on="keyword_name", how="inner")

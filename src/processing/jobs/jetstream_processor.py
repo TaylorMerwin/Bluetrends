@@ -51,22 +51,8 @@ df = spark.readStream \
     .load()
 
 
-# At driver startup: load and broadcast existing keywords once
-existing_kw_map = {
-    row['keyword_name']: row['keyword_id']
-    for row in spark.read
-        .format("jdbc")
-        .option("url", "jdbc:mysql://db:3306/bluetrends")
-        .option("dbtable", "keywords")
-        .option("user", "blueuser")
-        .option("password", "bluepassword")
-        .load()
-        .select("keyword_name", "keyword_id")
-        .collect()
-}
-broadcast_kw_map = spark.sparkContext.broadcast(existing_kw_map)
 
-# (Optional) also broadcast post_uuid → post_id map for faster lookups
+
 posts_map = {
     row['post_uuid']: row['post_id']
     for row in spark.read
@@ -81,17 +67,14 @@ posts_map = {
 }
 broadcast_posts_map = spark.sparkContext.broadcast(posts_map)
 
-# Convert binary value column to string
 df_string = df.selectExpr("CAST(value AS STRING) as json_str")
 
-# Define the schema matching our JSON structure
 schema = StructType([
     StructField("did", StringType(), True),
     StructField("createdAt", StringType(), True),
     StructField("text", StringType(), True),
 ])
 
-# Parse the JSON string column into a structured DataFrame
 df_parsed = df_string.select(from_json(col("json_str"), schema).alias("data")).select("data.*")
 
 df_parsed = df_parsed.withColumn("post_uuid", expr("uuid()"))
@@ -108,7 +91,6 @@ df_parsed = df_parsed.withColumn(
 
 df_parsed = df_parsed.withColumnRenamed("createdAt", "created_at")
 
-# replace null time stamps with current timestamp
 df_parsed = df_parsed.withColumn("created_at", coalesce(col("created_at"), current_timestamp()))
 
 df_parsed = df_parsed.withColumn(
@@ -120,9 +102,6 @@ df_parsed = df_parsed.withColumn(
     .otherwise(col("created_at"))
 )
 
-# Functions for additional processing
-
-# Set the seed for reproducibility
 DetectorFactory.seed = 0
 
 def safe_detect(text: str) -> str | None:
@@ -174,44 +153,6 @@ def sentiment_udf(texts: pd.Series) -> pd.DataFrame:
 # Keyword detection and extraction
 kw_model = KeyBERT(model="all-MiniLM-L6-v2")
 
-custom_stop_words = [
-    # very common English words
-    'a','an','the','and','or','oh','but','if','then','else','for','while',
-    'of','at','by','with','without','in','on','to','from','up','down',
-    'is','are','be','been','being','it','its','this','that','these','those',
-    'i','you','he','she','they','we','us','our','their','me','my','mine', 'know', 'think', 'too'
-    # contractions & filler
-    'im','ive','dont','cant','wont','just','really','also','very','so',
-    'only','even','still','yet','much','many','more','some','any','no','not', 'have', 'unfortunately', ]
-
-stop_words = [
-    'me', 'my', 'myself',
-    'we', 'our', 'ours', 'ourselves',
-    'you', 'your', 'yours', 'yourself', 'yourselves',
-    'he', 'him', 'his', 'himself',
-    'she', 'her', 'hers', 'herself',
-    'it', 'its', 'itself',
-    'they', 'them', 'their', 'theirs', 'themselves',
-    'what', 'which', 'who', 'whom',
-    'this', 'that', 'these', 'those',
-    'am', 'is', 'are', 'was', 'were',
-    'be', 'been', 'being',
-    'have', 'has', 'had', 'having',
-    'do', 'does', 'did', 'doing',
-    'a', 'an', 'the',
-    'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while',
-    'of', 'at', 'by', 'for', 'with', 'about', 'against',
-    'between', 'into', 'through', 'during', 'before', 'after',
-    'above', 'below',
-    'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under',
-    'again', 'further', 'then', 'once',
-    'here', 'there', 'when', 'where', 'why', 'how', 'how', 'however'
-    'all', 'any', 'both', 'each', 'few', 'more', 'most',
-    'other', 'some', 'such',
-    'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
-    's', 't', 'can', 'will', 'just', 'don', 'should', 'now', 're',
-]
-
 words = [
     'am', 'can', 'down', 'from', 'as', 'be', 'are', 'too', 'through', 'does', 'a', 'but', 'now', 'some', 'an', 'we',
     'below', 'against', 'here', 'did', 'how', 'yourselves', 'was', 'above', 'him', 'it', 'which', 'himself', 'its',
@@ -224,7 +165,6 @@ words = [
     'whom', 'i', 'my', 'you', 'to', 'myself', 'about', 'been', 'will', 'between'
 ]
 
-
 bluesky_stop_words = [
 
     'bsky','social', 'bluesky', 'sexy','love',
@@ -233,7 +173,6 @@ bluesky_stop_words = [
 ]
 
 combined_stop_words = words + bluesky_stop_words
-
 
 @pandas_udf(StringType())
 def extract_keywords_json_udf(text_series: pd.Series) -> pd.Series:
@@ -261,10 +200,8 @@ def extract_keywords_json_udf(text_series: pd.Series) -> pd.Series:
 
 def enrich_batch(batch_df):
 
-    # Drop rows with empty text
     batch_df = batch_df.filter(col("text").isNotNull() & (col("text") != ""))
 
-    # Enrich the DataFrame
     batch_df = (
         batch_df
         .withColumn("language", lang_udf(col("text")))
@@ -290,8 +227,6 @@ def enrich_batch(batch_df):
 
 def write_posts_table(enriched_df):
     """Write the core post fields out to MySQL."""
-
-    # posts_df = enriched_df.drop("keywords")
 
     posts_df = (
         enriched_df

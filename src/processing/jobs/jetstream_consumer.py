@@ -65,15 +65,12 @@ def write_to_raw_posts(batch_df, batch_id):
     )
 
 
-    # Drop rows with empty text
     batch_df = batch_df.filter(col("text").isNotNull() & (col("text") != ""))
 
     jdbc_url = os.environ.get("MYSQL_JDBC_URL")  # e.g., "jdbc:mysql://<db_host>:<db_port>/bluetrends"
     username = os.environ.get("MYSQL_USERNAME")
     password = os.environ.get("MYSQL_PASSWORD")
-    # print("jdbc url: ", jdbc_url)
-    # print("username: ", username)
-    # print("password: ", password)
+
     batch_df.write \
         .format("jdbc") \
         .option("url", "jdbc:mysql://db:3306/bluetrends") \
@@ -84,7 +81,6 @@ def write_to_raw_posts(batch_df, batch_id):
         .mode("append") \
         .save()
 
-# Write the stream to the console, for testing
 query = df_parsed.writeStream \
     .foreachBatch(write_to_raw_posts) \
     .outputMode("append") \

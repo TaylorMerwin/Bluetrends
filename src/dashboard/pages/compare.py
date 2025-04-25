@@ -3,7 +3,6 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 from components import render_navbar, keyword_stats_table, get_top_keywords_cached
 
-# options for dropdown (top 200 keywords for autocomplete convenience)
 options = [{"label": kw, "value": kw}
            for kw in get_top_keywords_cached(200)["keyword"].tolist()]
 

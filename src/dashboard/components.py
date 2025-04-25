@@ -57,7 +57,6 @@ def hour_to_12h(hour: int) -> str:
     h12 = (hour % 12) or 12
     return f"{h12} {'AM' if hour < 12 else 'PM'}"
 
-# Helper function to load data
 def _dashboard_data():
     """
     Return cached aggregates; cache key changes every BUCKET_MINUTES.
@@ -70,9 +69,6 @@ def _dashboard_data():
 
     start = end - timedelta(hours=LOOKBACK_HOURS)
     return load_dashboard_aggregates(start, end)   # still @lru_cache-decorated
-
-
-# ─── Fetch data once at start-up  ────────────────────────────────────────
 
 
 def render_navbar():
@@ -177,7 +173,6 @@ def render_fast_facts():
 
     return Spinner(cards_row, color="primary", type="border", fullscreen=False)
 
-# ─── Sentiment charts ──────────────────────────────────────────────────────
 def render_sentiment_pie():
     """
     Pie chart of sentiment share across all posts in the last LOOKBACK_HOURS.
@@ -265,7 +260,6 @@ def render_language_bar(full_width=False):
     )
     return dcc.Graph(id="lang-bar", figure=fig, style={"width": "100%"})
 
-# ─── Keyword charts -------------------------------------------------------
 def keyword_leaderboard(limit=20):
     """
     Horizontal bar chart of the top `limit` keywords.
@@ -281,9 +275,9 @@ def keyword_leaderboard(limit=20):
         orientation="h",
         title=f"Top {limit} Keywords (last 72 h)",
         labels={"total_posts": "Posts", "keyword": "Keyword"},
-        text="total_posts",                          # ← count labels
-        color="keyword",                             # ← rainbow colours
-        color_discrete_sequence=qualitative.Alphabet, # 26-colour rainbow; Plotly will cycle
+        text="total_posts",
+        color="keyword",
+        color_discrete_sequence=qualitative.Alphabet,
     )
     fig.update_traces(textposition="outside")
     fig.update_layout(

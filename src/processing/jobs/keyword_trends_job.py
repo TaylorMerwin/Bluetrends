@@ -73,7 +73,6 @@ def main(start: str, end: str):
                      (F.col("created_at") <  F.lit(end)))
     )
 
-    # Parse keywords JSON
     kw_schema = ArrayType(ArrayType(StringType()))
     posts2 = posts.withColumn(
         "kw_array", F.from_json(F.col("keywords").cast("string"), kw_schema)
@@ -81,7 +80,6 @@ def main(start: str, end: str):
         "post_id", "created_at", "sentiment_score", "sentiment_label", "kw_array"
     )
 
-    # Explode into (post, keyword, label) rows
     exploded = posts2.select(
         "post_id", "created_at", "sentiment_score", "sentiment_label",
         F.explode("kw_array").alias("kv")
@@ -91,7 +89,6 @@ def main(start: str, end: str):
         F.col("kv").getItem(0).alias("keyword")
     ).filter(F.length("keyword") <= 100)
 
-    # Aggregate: one row per keyword & sentiment_label
     trends = (
         keyword_rows
         .groupBy("keyword", "sentiment_label")
@@ -114,10 +111,8 @@ def main(start: str, end: str):
     logging.info("[Debug] sample trends:")
     trends.show(5, truncate=False)
 
-    # Dedupe just in case
     trends = trends.dropDuplicates(["keyword", "sentiment_label", "period_start"])
 
-    # Write into MySQL
     upsert_trends(trends, start, end)
     spark.stop()
 

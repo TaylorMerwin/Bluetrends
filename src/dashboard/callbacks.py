@@ -5,7 +5,6 @@ from components import keyword_sentiment_bars
 from data_loader import get_top_keywords_cached
 from components import keyword_stats_table
 
-# ---- callback: click bar → update sentiment chart ------------------------
 @callback(
     Output("selected-keywords", "data"),
     Input("kw-leaderboard", "clickData"),
