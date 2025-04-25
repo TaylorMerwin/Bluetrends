@@ -1,0 +1,16 @@
+@import url("https://use.typekit.net/hkj6lfo.css");
+
+body {
+    font-family: "neue-haas-grotesk-text", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: neue-haas-grotesk-display, sans-serif;
+    font-weight: 600;
+    font-style: normal;
+}
+h1 {
+    text-align: center;
+}
